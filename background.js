@@ -10,7 +10,6 @@ chrome.runtime.onMessage.addListener((msg) => {
     const unlockedNames = data.surahList.map((s) => s.name);
     const pool = quranData[level] || quranData.easy;
 
-    // pick a new one if possible
     const remaining = pool.filter((s) => !unlockedNames.includes(s.name));
     const choice = remaining.length
       ? remaining[Math.floor(Math.random() * remaining.length)]
@@ -19,40 +18,50 @@ chrome.runtime.onMessage.addListener((msg) => {
     const { number, name, icon } = choice;
     const ayahNumber = 1;
 
+    // 1) fetch the verse text + translation
     fetch(`https://quranapi.pages.dev/v1/verses/${number}:${ayahNumber}`)
       .then((res) => res.json())
-      .then((json) => {
-        const ayahText = json.text;
-        const translation = json.translation.en;
-        const audioUrl = json.audio.primary; // audio URL
+      .then((verseJson) => {
+        const ayahText = verseJson.text;
+        const translation = verseJson.translation.en;
 
-        const unlockedSurah = {
-          number,
-          name,
-          icon,
-          ayah: ayahText,
-          translation,
-          audioUrl,
-        };
+        // 2) fetch the audio URLs for the chapter
+        return fetch(`https://quranapi.pages.dev/api/audio/${number}.json`)
+          .then((res) => res.json())
+          .then((audioJson) => {
+            // pick reciter #1 by default
+            const audioUrl = audioJson["1"]?.url;
 
-        if (!unlockedNames.includes(name)) {
-          data.surahList.push(unlockedSurah);
-        }
+            const unlockedSurah = {
+              number,
+              name,
+              icon,
+              ayah: ayahText,
+              translation,
+              audioUrl,
+            };
 
-        chrome.storage.local.set(
-          {
-            surahList: data.surahList,
-            lastSurah: unlockedSurah,
-          },
-          () => {
-            chrome.notifications.create({
-              type: "basic",
-              iconUrl: "icons/icon128.png",
-              title: `You unlocked: ${name}`,
-              message: `${ayahText}\n\n${translation}`,
-            });
-          }
-        );
+            // 3) add it if new
+            if (!unlockedNames.includes(name)) {
+              data.surahList.push(unlockedSurah);
+            }
+
+            // 4) save & notify
+            chrome.storage.local.set(
+              {
+                surahList: data.surahList,
+                lastSurah: unlockedSurah,
+              },
+              () => {
+                chrome.notifications.create({
+                  type: "basic",
+                  iconUrl: "icons/icon128.png",
+                  title: `You unlocked: ${name}`,
+                  message: `${ayahText}\n\n${translation}`,
+                });
+              }
+            );
+          });
       })
       .catch((err) => console.error("SurahSolver fetch error", err));
   });
