@@ -1,23 +1,26 @@
-console.log("👀 SurahSolver content script loaded.");
+// content.js
+console.log("👀 SurahSolver script loaded and polling page text for 'Accepted'...");
 
-let lastSeen = "";
+let triggered = false;
 
-setInterval(() => {
-  const banner = document.querySelector('[data-cy="submission-result"]');
-  if (banner) {
-    console.log("📦 Submission result detected:", banner.textContent);
-  }
+function pollForAccepted() {
+  const bodyText = document.body.innerText;
+  if (!triggered && bodyText.includes("Accepted")) {
+    triggered = true;
+    console.log("✅ Found “Accepted” in page text — triggering SurahSolver");
 
-  if (banner && banner.textContent.includes("Accepted") && banner.textContent !== lastSeen) {
-    lastSeen = banner.textContent;
-    console.log("✅ Problem accepted! Triggering SurahSolver.");
-
-    const difficultyLabel = document.querySelector('[diff]');
-    const difficulty = difficultyLabel ? difficultyLabel.getAttribute('diff').toLowerCase() : 'easy';
+    // detect difficulty (same as before)
+    const diffEl = document.querySelector('[diff]');
+    const difficulty = diffEl
+      ? diffEl.getAttribute('diff').toLowerCase()
+      : 'easy';
 
     chrome.runtime.sendMessage({
       type: "PROBLEM_SOLVED",
-      difficulty: difficulty
+      difficulty
     });
   }
-}, 3000);
+  setTimeout(pollForAccepted, 2000);
+}
+
+pollForAccepted();
