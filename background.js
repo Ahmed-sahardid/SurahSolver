@@ -1,34 +1,59 @@
 // background.js
-self.importScripts("quran_data.js");
+importScripts("quran_data.js");
 
 chrome.runtime.onMessage.addListener((msg) => {
-  if (msg.type === 'PROBLEM_SOLVED') {
-    const level = msg.difficulty || 'easy';
-    const surah = getRandomSurah(level);
+  if (msg.type !== "PROBLEM_SOLVED") return;
 
-    // Append to our surahList array
-    chrome.storage.local.get({ surahList: [] }, data => {
-      const updated = data.surahList;
-      updated.push(surah);
-      chrome.storage.local.set({
-        lastSurah: surah,
-        surahList: updated
-      });
-    });
+  const level = msg.difficulty || "easy";
 
-    // Fire the little notification
-    chrome.notifications.create({
-      type: "basic",
-      iconUrl: "icons/icon128.png",
-      title: `🎉 You unlocked: ${surah.name}`,
-      message: `${surah.ayah}\n${surah.translation}`
-    });
+  chrome.storage.local.get({ surahList: [] }, (data) => {
+    const unlockedNames = data.surahList.map((s) => s.name);
+    const pool = quranData[level] || quranData.easy;
 
-    console.log("🔔 Notification sent:", surah);
-  }
+    // pick a new one if possible
+    const remaining = pool.filter((s) => !unlockedNames.includes(s.name));
+    const choice = remaining.length
+      ? remaining[Math.floor(Math.random() * remaining.length)]
+      : pool[Math.floor(Math.random() * pool.length)];
+
+    const { number, name, icon } = choice;
+    const ayahNumber = 1;
+
+    fetch(`https://quranapi.pages.dev/v1/verses/${number}:${ayahNumber}`)
+      .then((res) => res.json())
+      .then((json) => {
+        const ayahText = json.text;
+        const translation = json.translation.en;
+        const audioUrl = json.audio.primary; // audio URL
+
+        const unlockedSurah = {
+          number,
+          name,
+          icon,
+          ayah: ayahText,
+          translation,
+          audioUrl,
+        };
+
+        if (!unlockedNames.includes(name)) {
+          data.surahList.push(unlockedSurah);
+        }
+
+        chrome.storage.local.set(
+          {
+            surahList: data.surahList,
+            lastSurah: unlockedSurah,
+          },
+          () => {
+            chrome.notifications.create({
+              type: "basic",
+              iconUrl: "icons/icon128.png",
+              title: `You unlocked: ${name}`,
+              message: `${ayahText}\n\n${translation}`,
+            });
+          }
+        );
+      })
+      .catch((err) => console.error("SurahSolver fetch error", err));
+  });
 });
-
-function getRandomSurah(level) {
-  const pool = quranData[level] || quranData.easy;
-  return pool[Math.floor(Math.random() * pool.length)];
-}

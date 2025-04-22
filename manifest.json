@@ -2,14 +2,15 @@
   "manifest_version": 3,
   "name": "Surah Solver",
   "version": "1.0",
-  "description": "Get matched with a Surah after solving a LeetCode problem — plus your Surah‑dex on every page!",
+  "description": "Solve a LeetCode problem → unlock a Sūrah verse via quranapi.pages.dev!",
   "permissions": [
     "storage",
     "notifications",
     "scripting"
   ],
   "host_permissions": [
-    "https://leetcode.com/*"
+    "https://leetcode.com/*",
+    "https://quranapi.pages.dev/*"
   ],
   "background": {
     "service_worker": "background.js"
