@@ -1,27 +1,26 @@
 {
-      "manifest_version": 3,
-      "name": "Surah Solver",
-      "version": "1.0",
-      "description": "Get matched with a Surah every time you solve a LeetCode problem.",
-      "permissions": ["storage", "notifications", "scripting"],
-      "host_permissions": ["*://leetcode.com/*"],
-      "background": {
-        "service_worker": "background.js"
-      },
-      "content_scripts": [
-        {
-          "matches": ["*://leetcode.com/*"],
-          "js": ["content.js"]
-        }
-      ],
-      "action": {
-        "default_popup": "popup/popup.html",
-        "default_icon": {
-          "128": "icons/icon128.png"
-        }
-      },
-      "icons": {
-        "128": "icons/icon128.png"
-      }
+  "manifest_version": 3,
+  "name": "Surah Solver",
+  "version": "1.0",
+  "description": "Get matched with a Surah after solving a LeetCode problem.",
+  "permissions": ["storage", "notifications", "scripting"],
+  "host_permissions": ["https://leetcode.com/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://leetcode.com/*"],
+      "js": ["content.js"]
     }
-    
+  ],
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "128": "icons/icon128.png"
+  }
+}
