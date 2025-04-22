@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Surah Solver",
   "version": "1.0",
-  "description": "Get matched with a Surah after solving a LeetCode problem.",
+  "description": "Get matched with a Surah after solving a LeetCode problem — plus your Surah‑dex on every page!",
   "permissions": ["storage", "notifications", "scripting"],
   "host_permissions": ["https://leetcode.com/*"],
   "background": {
@@ -11,7 +11,7 @@
   "content_scripts": [
     {
       "matches": ["https://leetcode.com/*"],
-      "js": ["content.js"]
+      "js": ["quran_data.js", "content.js"]
     }
   ],
   "action": {
