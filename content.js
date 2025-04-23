@@ -33,9 +33,7 @@
     #qs-settings-modal h2 {
       margin: 0 0 16px; font-size: 18px; text-align: center;
     }
-    #qs-settings-modal ul {
-      list-style: none; padding: 0; margin: 0; flex: 1;
-    }
+    #qs-settings-modal ul { list-style: none; padding: 0; margin: 0; flex: 1; }
     #qs-settings-modal li {
       margin: 8px 0; padding-left: 20px;
       position: relative; cursor: pointer; user-select: none;
@@ -93,15 +91,6 @@
       display: flex; align-items: center; gap: 8px;
       margin-bottom: 16px;
     }
-    .ayat-audio-container label {
-      font-size: 14px; color: #333;
-    }
-    .ayat-audio-container select {
-      padding: 4px; font-size: 14px;
-    }
-    #ayah-audio {
-      flex: 1;
-    }
     .ayat-controls {
       display: flex; justify-content: space-between;
       margin-bottom: 12px;
@@ -119,10 +108,31 @@
       align-self: center;
     }
     #ayah-close:hover { background: #ddd; }
+
+    /* COUNTDOWN CIRCLE */
+    #qs-countdown {
+      position: fixed; top: 20px; right: 20px;
+      width: 80px; height: 80px;
+      background: #c62828; border-radius: 50%;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      color: white; z-index: 1000001;
+    }
+    #qs-countdown .countdown-arabic {
+      font-size: 24px; line-height: 1;
+    }
+    #qs-countdown .countdown-numeric {
+      font-size: 16px; line-height: 1;
+    }
   `;
   document.head.appendChild(css);
 
-  // ── 1) SHARED STATE & HELPERS ─────────────────────────────────────────────
+  // ── 1) ARABIC DIGITS UTILITY & STATE ───────────────────────────────────────
+  const arabicDigits = { '0':'٠','1':'١','2':'٢','3':'٣','4':'٤','5':'٥','6':'٦','7':'٧','8':'٨','9':'٩' };
+  function toArabic(num) {
+    return String(num).split('').map(d => arabicDigits[d] || d).join('');
+  }
+
   let chapters = [], offsets = [0], totalAyahs = 0, currentIndex = 0;
   let availableReciters = [], currentSurah = 1, currentAyah = 1;
   let showRandomAyah = () => {};
@@ -133,12 +143,8 @@
     let s = 1;
     while (s <= chapters.length && offsets[s] <= idx) s++;
     s--;
-    const ay = idx - offsets[s] + 1;
-    return { surah: s, ayah: ay, idx };
-  }
-
-  function getGlobalAyahNumber(s, a) {
-    return offsets[s - 1] + a;
+    const ayah = idx - offsets[s] + 1;
+    return { surah: s, ayah, idx };
   }
 
   // ── 2) FETCH RECITERS & CHAPTER METADATA ───────────────────────────────────
@@ -164,7 +170,31 @@
       showSettingsModal();
     });
 
-  // ── 3) BUILD THE AYAH OVERLAY ──────────────────────────────────────────────
+  // ── 3) COUNTDOWN HANDLER ───────────────────────────────────────────────────
+  function startCountdown(seconds) {
+    let remaining = seconds;
+    const countdown = document.createElement("div");
+    countdown.id = "qs-countdown";
+    countdown.innerHTML = `
+      <div class="countdown-arabic">${toArabic(remaining)}</div>
+      <div class="countdown-numeric">${remaining}</div>
+    `;
+    document.body.appendChild(countdown);
+
+    const interval = setInterval(() => {
+      remaining--;
+      if (remaining <= 0) {
+        clearInterval(interval);
+        countdown.remove();
+        showRandomAyah();
+      } else {
+        countdown.querySelector(".countdown-arabic").textContent = toArabic(remaining);
+        countdown.querySelector(".countdown-numeric").textContent = remaining;
+      }
+    }, 1000);
+  }
+
+  // ── 4) BUILD THE AYAH OVERLAY ──────────────────────────────────────────────
   function createOverlay() {
     const overlay = document.createElement("div");
     overlay.id = "ayah-overlay";
@@ -212,6 +242,14 @@
       }, 1000);
     }
 
+    function loadAudio(reciterID) {
+      const endpoint = `https://api.alquran.cloud/v1/ayah/${currentSurah}:${currentAyah}/${reciterID}`;
+      fetch(endpoint)
+        .then(r => r.json())
+        .then(js => { audioEl.src = js.data.audio; })
+        .catch(err => console.error(`Failed loading audio for ${reciterID}:`, err));
+    }
+
     function showAyah(surah, ayah, idx) {
       currentIndex = idx; currentSurah = surah; currentAyah = ayah;
       const chap = chapters.find(c => c.id === surah) || {};
@@ -232,8 +270,7 @@
             reciterSelect.appendChild(opt);
           });
 
-          const globalNum = getGlobalAyahNumber(surah, ayah);
-          audioEl.src = `https://cdn.islamic.network/quran/audio/128/${reciterSelect.value}/${globalNum}.mp3`;
+          loadAudio(reciterSelect.value);
           overlay.style.display = "flex";
           startReadingTimer();
         })
@@ -255,20 +292,14 @@
       showAyah(surah, ayah, idx);
     };
     btnRand.onclick = showRandomAyah;
-
-    reciterSelect.onchange = () => {
-      const globalNum = getGlobalAyahNumber(currentSurah, currentAyah);
-      audioEl.src = `https://cdn.islamic.network/quran/audio/128/${reciterSelect.value}/${globalNum}.mp3`;
-      audioEl.play();
-    };
-
+    reciterSelect.onchange = () => loadAudio(reciterSelect.value);
     btnClose.onclick = () => {
       overlay.style.display = "none";
       clearInterval(timerInterval);
     };
   }
 
-  // ── 4) SETTINGS MODAL ─────────────────────────────────────────────────────
+  // ── 5) SETTINGS MODAL ─────────────────────────────────────────────────────
   function showSettingsModal() {
     const modal = document.createElement("div");
     modal.id = "qs-settings-modal";
@@ -324,7 +355,7 @@
         else return alert("Enter a valid number");
       }
       modal.remove();
-      if (delayMs > 0) setTimeout(showRandomAyah, delayMs);
+      if (delayMs > 0) startCountdown(Math.floor(delayMs / 1000));
     });
 
     modal.querySelector("#qs-reset").addEventListener("click", () => {
