@@ -1,106 +1,113 @@
-// content.js
 ;(() => {
   // ── 0) INJECT ALL CSS ─────────────────────────────────────────────────────
   const css = document.createElement("style");
   css.textContent = `
     /* SETTINGS MODAL */
     #qs-settings-modal {
-      position: fixed; top:0; left:0; width:100%; height:100%;
-      display:flex; align-items:center; justify-content:center;
-      background:rgba(0,0,0,0.6); z-index:100000;
-      font-family:'Press Start 2P',monospace;
+      position: fixed; top: 0; left: 0;
+      width: 100%; height: 100%;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(0,0,0,0.6);
+      z-index: 100000;
+      font-family: 'Press Start 2P', monospace;
     }
     #qs-settings-modal .qs-modal {
-      display:flex; width:700px; height:400px;
-      background:#c62828; border:8px solid #7f0000; border-radius:16px;
-      overflow:hidden; box-shadow:0 0 20px rgba(0,0,0,0.8);
+      display: flex; width: 700px; height: 400px;
+      background: #c62828; border: 8px solid #7f0000;
+      border-radius: 16px; overflow: hidden;
+      box-shadow: 0 0 20px rgba(0,0,0,0.8);
     }
     #qs-settings-modal .qs-console {
-      flex:1; background:#222;
-      display:flex; align-items:center; justify-content:center;
-      color:#ffeb3b; font-size:48px;
+      flex: 1; background: #222;
+      display: flex; align-items: center; justify-content: center;
+      color: #ffeb3b; font-size: 48px;
     }
-    #qs-settings-modal .qs-console::after { content:"Q"; }
+    #qs-settings-modal .qs-console::after { content: "Q"; }
     #qs-settings-modal .qs-menu {
-      flex:1; background:#ffeb3b; padding:20px; box-sizing:border-box;
-      display:flex; flex-direction:column; justify-content:space-between;
+      flex: 1; background: #ffeb3b;
+      padding: 20px; box-sizing: border-box;
+      display: flex; flex-direction: column; justify-content: space-between;
     }
     #qs-settings-modal h2 {
-      margin:0 0 16px; font-size:18px; text-align:center;
+      margin: 0 0 16px; font-size: 18px; text-align: center;
     }
     #qs-settings-modal ul {
-      list-style:none; padding:0; margin:0; flex:1;
+      list-style: none; padding: 0; margin: 0; flex: 1;
     }
     #qs-settings-modal li {
-      margin:8px 0; padding-left:20px; position:relative;
-      cursor:pointer; user-select:none;
+      margin: 8px 0; padding-left: 20px;
+      position: relative; cursor: pointer; user-select: none;
     }
     #qs-settings-modal li::before {
-      content:'›'; position:absolute; left:0; color:#333;
+      content: '›'; position: absolute; left: 0; color: #333;
     }
-    #qs-settings-modal li.selected { background:#f57f17; }
+    #qs-settings-modal li.selected { background: #f57f17; }
     #qs-settings-modal .custom-input {
-      margin-left:20px; width:60px; font-size:14px;
-      padding:4px; display:none;
+      margin-left: 20px; width: 60px; font-size: 14px;
+      padding: 4px; display: none;
     }
-    #qs-settings-modal .qs-buttons { text-align:right; }
+    #qs-settings-modal .qs-buttons { text-align: right; }
     #qs-settings-modal button {
-      background:#333; color:#ffeb3b; border:none;
-      padding:8px 16px; font-size:14px; cursor:pointer;
-      border-radius:4px; margin-left:8px;
+      background: #333; color: #ffeb3b; border: none;
+      padding: 8px 16px; font-size: 14px;
+      cursor: pointer; border-radius: 4px; margin-left: 8px;
     }
 
-    /* AYAH OVERLAY */
+    /* AYAH OVERLAY (hidden by default) */
     #ayah-overlay {
-      display:none; position:fixed; top:0; left:0;
-      width:100%; height:100%; background:rgba(0,0,0,0.8);
-      display:flex; align-items:center; justify-content:center;
-      padding:20px; box-sizing:border-box; z-index:999999;
-      font-family:sans-serif;
+      display: none;           /* only this display should apply */
+      position: fixed; top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.8);
+      align-items: center;     /* will take effect once you set display:flex */
+      justify-content: center;
+      padding: 20px; box-sizing: border-box;
+      font-family: sans-serif; z-index: 999999;
     }
     #ayah-box {
-      background:#fff; border-radius:8px;
-      max-width:600px; width:100%; padding:24px;
-      display:flex; flex-direction:column; align-items:stretch;
+      background: #fff; border-radius: 8px;
+      max-width: 600px; width: 100%; padding: 24px;
+      display: flex; flex-direction: column; align-items: stretch;
     }
     #ayah-header {
-      font-weight:bold; text-align:center;
-      margin-bottom:16px; font-size:16px;
+      font-weight: bold; text-align: center;
+      margin-bottom: 16px; font-size: 16px;
     }
     #ayah-text {
-      font-family:'Scheherazade',serif; font-size:1.6em;
-      direction:rtl; text-align:right; background:#ffffe0;
-      padding:12px; border-radius:4px; margin-bottom:12px;
+      font-family: 'Scheherazade', serif;
+      font-size: 1.6em; direction: rtl; text-align: right;
+      background: #ffffe0; padding: 12px;
+      border-radius: 4px; margin-bottom: 12px;
     }
     #ayah-trans {
-      font-style:italic; margin-bottom:12px; color:#333;
-      text-align:left;
+      font-style: italic; margin-bottom: 12px;
+      color: #333; text-align: left;
     }
     #ayah-audio {
-      width:100%; margin-bottom:16px;
+      width: 100%; margin-bottom: 16px;
     }
     .ayat-controls {
-      display:flex; justify-content:space-between;
-      margin-bottom:12px;
+      display: flex; justify-content: space-between;
+      margin-bottom: 12px;
     }
     .ayat-controls button {
-      background:#b71c1c; color:#fff; border:none;
-      padding:8px 12px; border-radius:4px; cursor:pointer;
-      flex:1; margin:0 4px;
+      background: #b71c1c; color: #fff;
+      border: none; padding: 8px 12px;
+      border-radius: 4px; cursor: pointer;
+      flex: 1; margin: 0 4px;
     }
     #ayah-close {
-      background:#eee; color:#333; border:none;
-      padding:10px; border-radius:4px; cursor:pointer;
-      font-size:14px; align-self:center;
+      background: #eee; color: #333; border: none;
+      padding: 10px; border-radius: 4px;
+      cursor: pointer; font-size: 14px;
+      align-self: center;
     }
-    #ayah-close:hover { background:#ddd; }
+    #ayah-close:hover { background: #ddd; }
   `;
   document.head.appendChild(css);
 
-  // ── 1) SHOW SETTINGS MODAL IMMEDIATELY ────────────────────────────────────
-  showSettingsModal();
-
-  // ── 2) STATE & HELPERS ────────────────────────────────────────────────────
+  // (the rest of your code stays exactly the same)
+  // ── 1) SHARED STATE & HELPERS ─────────────────────────────────────────────
   let chapters = [], offsets = [0], totalAyahs = 0, currentIndex = 0;
   let showRandomAyah = () => {};
 
@@ -114,7 +121,7 @@
     return { surah: s, ayah, idx };
   }
 
-  // ── 3) LOAD METADATA THEN CREATE OVERLAY ─────────────────────────────────
+  // ── 2) LOAD CHAPTER METADATA & KICK OFF ───────────────────────────────────
   fetch("https://api.quran.com/api/v4/chapters?language=en")
     .then(r => r.json())
     .then(j => {
@@ -124,10 +131,11 @@
       }
       totalAyahs = offsets[chapters.length];
       createOverlay();
+      showSettingsModal();
     })
     .catch(console.error);
 
-  // ── 4) CREATE AYAH OVERLAY (HIDDEN) ───────────────────────────────────────
+  // ── 3) CREATE AYAH OVERLAY (REMAINS HIDDEN) ───────────────────────────────
   function createOverlay() {
     const overlay = document.createElement("div");
     overlay.id = "ayah-overlay";
@@ -146,28 +154,28 @@
       </div>`;
     document.body.appendChild(overlay);
 
-    const hdr     = overlay.querySelector("#ayah-header");
-    const txt     = overlay.querySelector("#ayah-text");
-    const trn     = overlay.querySelector("#ayah-trans");
-    const aud     = overlay.querySelector("#ayah-audio");
-    const btnPrev = overlay.querySelector("#ayat-prev");
-    const btnRand = overlay.querySelector("#ayat-random");
-    const btnNext = overlay.querySelector("#ayat-next");
-    const btnClose= overlay.querySelector("#ayah-close");
+    const hdr      = overlay.querySelector("#ayah-header");
+    const txt      = overlay.querySelector("#ayah-text");
+    const trn      = overlay.querySelector("#ayah-trans");
+    const aud      = overlay.querySelector("#ayah-audio");
+    const btnPrev  = overlay.querySelector("#ayat-prev");
+    const btnRand  = overlay.querySelector("#ayat-random");
+    const btnNext  = overlay.querySelector("#ayat-next");
+    const btnClose = overlay.querySelector("#ayah-close");
 
     function showAyah(surah, ayah, idx) {
       currentIndex = idx;
-      const chap = chapters.find(c => c.id===surah) || {};
+      const chap = chapters.find(c => c.id === surah) || {};
       hdr.textContent = `Surah ${chap.name_complex} (${chap.name_arabic}) — Ayah ${ayah}`;
       fetch(`https://api.alquran.cloud/v1/ayah/${surah}:${ayah}/editions/quran-uthmani,ar.alafasy,en.asad`)
-        .then(r=>r.json()).then(js=>{
+        .then(r => r.json())
+        .then(js => {
           const [ar, au, tr] = js.data;
           txt.textContent  = ar.text;
           trn.textContent  = tr.text;
           aud.src          = au.audio;
           overlay.style.display = "flex";
-        })
-        .catch(console.error);
+        }).catch(console.error);
     }
 
     showRandomAyah = () => {
@@ -176,11 +184,11 @@
       showAyah(surah, ayah, idx);
     };
 
-    btnPrev.onclick = () => {
+    btnPrev.onclick  = () => {
       const { surah, ayah, idx } = idxToSurahAyah(currentIndex - 1);
       showAyah(surah, ayah, idx);
     };
-    btnNext.onclick = () => {
+    btnNext.onclick  = () => {
       const { surah, ayah, idx } = idxToSurahAyah(currentIndex + 1);
       showAyah(surah, ayah, idx);
     };
@@ -188,7 +196,7 @@
     btnClose.onclick = () => overlay.style.display = "none";
   }
 
-  // ── 5) SETTINGS MODAL DEFINITION ──────────────────────────────────────────
+  // ── 4) SETTINGS MODAL ─────────────────────────────────────────────────────
   function showSettingsModal() {
     const modal = document.createElement("div");
     modal.id = "qs-settings-modal";
@@ -240,11 +248,13 @@
     modal.querySelector("#qs-save").onclick = () => {
       if (delayMs === null) {
         const v = parseInt(customInput.value,10);
-        if (v>0) delayMs = v*60000;
+        if (v > 0) delayMs = v*60000;
         else return alert("Enter a valid number");
       }
       modal.remove();
-      if (delayMs > 0) setTimeout(showRandomAyah, delayMs);
+      if (delayMs > 0) {
+        setTimeout(showRandomAyah, delayMs);
+      }
     };
 
     modal.querySelector("#qs-reset").onclick = () => {

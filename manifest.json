@@ -4,25 +4,17 @@
   "version": "1.0",
   "description": "Solve a LeetCode problem → unlock a Sūrah verse via quranapi.pages.dev!",
   "permissions": [
-    "storage",
-    "notifications",
-    "scripting"
+    "storage"
   ],
   "host_permissions": [
     "https://leetcode.com/*",
     "https://api.quran.com/*",
     "https://api.alquran.cloud/*"
   ],
-  "background": {
-    "service_worker": "background.js"
-  },
   "content_scripts": [
     {
       "matches": ["https://leetcode.com/*"],
       "js": ["content.js"]
     }
-  ],
-  "action": {
-    "default_popup": "popup/popup.html"
-  }
+  ]
 }

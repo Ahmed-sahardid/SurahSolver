@@ -1,16 +1,18 @@
-// background.js
+chrome.runtime.onMessage.addListener((msg) => {
+  if (msg.action === 'startTimer') {
+    const when = Date.now() + msg.durationMs;
+    chrome.storage.local.set({ expiration: when });
+    chrome.alarms.create('showPanel', { when });
+  }
+});
 
-// Listen for the “PROBLEM_SOLVED” message from content.js
-chrome.runtime.onMessage.addListener((msg, sender) => {
-  if (msg.type === "PROBLEM_SOLVED") {
-    // You can handle difficulty here if needed:
-    console.log("Problem solved with difficulty:", msg.difficulty);
-    // (Optionally show a notification or badge)
-    chrome.notifications.create({
-      type: "basic",
-      iconUrl: "icons/icon128.png",
-      title: "Surah Solver",
-      message: "You unlocked a new passage!"
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === 'showPanel') {
+    // Broadcast to every LeetCode tab
+    chrome.tabs.query({ url: 'https://leetcode.com/*' }, (tabs) => {
+      for (let tab of tabs) {
+        chrome.tabs.sendMessage(tab.id, { action: 'showPanel' });
+      }
     });
   }
 });
