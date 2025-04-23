@@ -1,4 +1,6 @@
 ;(() => {
+  console.log("🔍 Surah Solver content.js injected");
+
   // ── 0) INJECT ALL CSS ─────────────────────────────────────────────────────
   const css = document.createElement("style");
   css.textContent = `
@@ -55,19 +57,23 @@
 
     /* AYAH OVERLAY (hidden by default) */
     #ayah-overlay {
-      display: none;           /* only this display should apply */
+      display: none;
       position: fixed; top: 0; left: 0;
       width: 100%; height: 100%;
       background: rgba(0,0,0,0.8);
-      align-items: center;     /* will take effect once you set display:flex */
-      justify-content: center;
+      align-items: center; justify-content: center;
       padding: 20px; box-sizing: border-box;
       font-family: sans-serif; z-index: 999999;
     }
     #ayah-box {
+      position: relative;
       background: #fff; border-radius: 8px;
       max-width: 600px; width: 100%; padding: 24px;
       display: flex; flex-direction: column; align-items: stretch;
+    }
+    #ayah-timer {
+      position: absolute; top: 8px; right: 12px;
+      font-size: 14px; color: #555;
     }
     #ayah-header {
       font-weight: bold; text-align: center;
@@ -83,8 +89,18 @@
       font-style: italic; margin-bottom: 12px;
       color: #333; text-align: left;
     }
+    .ayat-audio-container {
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 16px;
+    }
+    .ayat-audio-container label {
+      font-size: 14px; color: #333;
+    }
+    .ayat-audio-container select {
+      padding: 4px; font-size: 14px;
+    }
     #ayah-audio {
-      width: 100%; margin-bottom: 16px;
+      flex: 1;
     }
     .ayat-controls {
       display: flex; justify-content: space-between;
@@ -106,9 +122,9 @@
   `;
   document.head.appendChild(css);
 
-  // (the rest of your code stays exactly the same)
   // ── 1) SHARED STATE & HELPERS ─────────────────────────────────────────────
   let chapters = [], offsets = [0], totalAyahs = 0, currentIndex = 0;
+  let availableReciters = [], currentSurah = 1, currentAyah = 1;
   let showRandomAyah = () => {};
 
   function idxToSurahAyah(idx) {
@@ -121,30 +137,44 @@
     return { surah: s, ayah, idx };
   }
 
-  // ── 2) LOAD CHAPTER METADATA & KICK OFF ───────────────────────────────────
+  // ── 2) FETCH RECITERS & CHAPTER METADATA ───────────────────────────────────
+  fetch("https://api.alquran.cloud/v1/edition?format=audio")
+    .then(r => r.json())
+    .then(js => { availableReciters = js.data; })
+    .catch(err => console.error("Failed loading reciters:", err));
+
   fetch("https://api.quran.com/api/v4/chapters?language=en")
     .then(r => r.json())
     .then(j => {
       chapters = j.chapters;
       for (let i = 0; i < chapters.length; i++) {
-        offsets[i+1] = offsets[i] + chapters[i].verses_count;
+        offsets[i + 1] = offsets[i] + chapters[i].verses_count;
       }
       totalAyahs = offsets[chapters.length];
       createOverlay();
       showSettingsModal();
     })
-    .catch(console.error);
+    .catch(err => {
+      console.error("Failed loading chapters:", err);
+      createOverlay();
+      showSettingsModal();
+    });
 
-  // ── 3) CREATE AYAH OVERLAY (REMAINS HIDDEN) ───────────────────────────────
+  // ── 3) BUILD THE AYAH OVERLAY ──────────────────────────────────────────────
   function createOverlay() {
     const overlay = document.createElement("div");
     overlay.id = "ayah-overlay";
     overlay.innerHTML = `
       <div id="ayah-box">
+        <div id="ayah-timer">00:00</div>
         <div id="ayah-header"></div>
         <div id="ayah-text"></div>
         <div id="ayah-trans"></div>
-        <audio id="ayah-audio" controls></audio>
+        <div class="ayat-audio-container">
+          <label for="reciter-select">Reciter:</label>
+          <select id="reciter-select"></select>
+          <audio id="ayah-audio" controls></audio>
+        </div>
         <div class="ayat-controls">
           <button id="ayat-prev">Before</button>
           <button id="ayat-random">Random</button>
@@ -154,28 +184,55 @@
       </div>`;
     document.body.appendChild(overlay);
 
-    const hdr      = overlay.querySelector("#ayah-header");
-    const txt      = overlay.querySelector("#ayah-text");
-    const trn      = overlay.querySelector("#ayah-trans");
-    const aud      = overlay.querySelector("#ayah-audio");
-    const btnPrev  = overlay.querySelector("#ayat-prev");
-    const btnRand  = overlay.querySelector("#ayat-random");
-    const btnNext  = overlay.querySelector("#ayat-next");
-    const btnClose = overlay.querySelector("#ayah-close");
+    const timerEl       = overlay.querySelector("#ayah-timer");
+    const hdr           = overlay.querySelector("#ayah-header");
+    const txt           = overlay.querySelector("#ayah-text");
+    const trn           = overlay.querySelector("#ayah-trans");
+    const reciterSelect = overlay.querySelector("#reciter-select");
+    const audioEl       = overlay.querySelector("#ayah-audio");
+    const btnPrev       = overlay.querySelector("#ayat-prev");
+    const btnRand       = overlay.querySelector("#ayat-random");
+    const btnNext       = overlay.querySelector("#ayat-next");
+    const btnClose      = overlay.querySelector("#ayah-close");
+
+    let timerInterval;
+    function startReadingTimer() {
+      clearInterval(timerInterval);
+      const start = Date.now();
+      timerEl.textContent = "00:00";
+      timerInterval = setInterval(() => {
+        const secs = Math.floor((Date.now() - start) / 1000);
+        const m = String(Math.floor(secs / 60)).padStart(2, "0");
+        const s = String(secs % 60).padStart(2, "0");
+        timerEl.textContent = `${m}:${s}`;
+      }, 1000);
+    }
 
     function showAyah(surah, ayah, idx) {
-      currentIndex = idx;
+      currentIndex = idx; currentSurah = surah; currentAyah = ayah;
       const chap = chapters.find(c => c.id === surah) || {};
       hdr.textContent = `Surah ${chap.name_complex} (${chap.name_arabic}) — Ayah ${ayah}`;
-      fetch(`https://api.alquran.cloud/v1/ayah/${surah}:${ayah}/editions/quran-uthmani,ar.alafasy,en.asad`)
+
+      fetch(`https://api.alquran.cloud/v1/ayah/${surah}:${ayah}/editions/quran-uthmani,en.asad`)
         .then(r => r.json())
         .then(js => {
-          const [ar, au, tr] = js.data;
-          txt.textContent  = ar.text;
-          trn.textContent  = tr.text;
-          aud.src          = au.audio;
+          const [ar, tr] = js.data;
+          txt.textContent = ar.text;
+          trn.textContent = tr.text;
+
+          reciterSelect.innerHTML = "";
+          availableReciters.forEach(rec => {
+            const opt = document.createElement("option");
+            opt.value = rec.identifier;
+            opt.textContent = rec.englishName || rec.name;
+            reciterSelect.appendChild(opt);
+          });
+
+          audioEl.src = `https://api.alquran.cloud/v1/ayah/${surah}:${ayah}/${reciterSelect.value}`;
           overlay.style.display = "flex";
-        }).catch(console.error);
+          startReadingTimer();
+        })
+        .catch(err => console.error("Failed loading ayah text:", err));
     }
 
     showRandomAyah = () => {
@@ -184,16 +241,23 @@
       showAyah(surah, ayah, idx);
     };
 
-    btnPrev.onclick  = () => {
+    btnPrev.onclick = () => {
       const { surah, ayah, idx } = idxToSurahAyah(currentIndex - 1);
       showAyah(surah, ayah, idx);
     };
-    btnNext.onclick  = () => {
+    btnNext.onclick = () => {
       const { surah, ayah, idx } = idxToSurahAyah(currentIndex + 1);
       showAyah(surah, ayah, idx);
     };
-    btnRand.onclick  = showRandomAyah;
-    btnClose.onclick = () => overlay.style.display = "none";
+    btnRand.onclick = showRandomAyah;
+    reciterSelect.onchange = () => {
+      audioEl.src = `https://api.alquran.cloud/v1/ayah/${currentSurah}:${currentAyah}/${reciterSelect.value}`;
+      audioEl.play();
+    };
+    btnClose.onclick = () => {
+      overlay.style.display = "none";
+      clearInterval(timerInterval);
+    };
   }
 
   // ── 4) SETTINGS MODAL ─────────────────────────────────────────────────────
@@ -232,38 +296,36 @@
         items.forEach(x => x.classList.remove("selected"));
         li.classList.add("selected");
         if (li.dataset.seconds) {
-          delayMs = parseInt(li.dataset.seconds,10)*1000;
+          delayMs = parseInt(li.dataset.seconds, 10) * 1000;
           customInput.style.display = "none";
         } else if (li.dataset.minutes === "custom") {
           delayMs = null;
           customInput.style.display = "inline-block";
           customInput.focus();
         } else {
-          delayMs = parseInt(li.dataset.minutes,10)*60000;
+          delayMs = parseInt(li.dataset.minutes, 10) * 60000;
           customInput.style.display = "none";
         }
       });
     });
 
-    modal.querySelector("#qs-save").onclick = () => {
+    modal.querySelector("#qs-save").addEventListener("click", () => {
       if (delayMs === null) {
-        const v = parseInt(customInput.value,10);
-        if (v > 0) delayMs = v*60000;
+        const v = parseInt(customInput.value, 10);
+        if (v > 0) delayMs = v * 60000;
         else return alert("Enter a valid number");
       }
       modal.remove();
-      if (delayMs > 0) {
-        setTimeout(showRandomAyah, delayMs);
-      }
-    };
+      if (delayMs > 0) setTimeout(showRandomAyah, delayMs);
+    });
 
-    modal.querySelector("#qs-reset").onclick = () => {
+    modal.querySelector("#qs-reset").addEventListener("click", () => {
       delayMs = null;
       items.forEach(x => x.classList.remove("selected"));
       customInput.style.display = "none";
       customInput.value = "";
       modal.style.display = "flex";
-    };
+    });
 
     modal.style.display = "flex";
   }
