@@ -7,7 +7,7 @@
   "host_permissions": [
     "https://leetcode.com/*",
     "https://quranapi.pages.dev/*",
-    "https://api.alquran.cloud/*"
+    "https://api.quran.com/*"
   ],
   "background": {
     "service_worker": "background.js"

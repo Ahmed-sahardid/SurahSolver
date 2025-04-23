@@ -1,6 +1,6 @@
 // content.js
 
-// 1) Poll for “Accepted” and notify background
+// 1) Poll for “Accepted” and notify background (unchanged)
 console.log("SurahSolver polling for Accepted");
 let triggered = false;
 function poll() {
@@ -15,7 +15,7 @@ function poll() {
 }
 poll();
 
-// 2) Floating toggle button
+// 2) Toggle button & draggable 150×150 px panel
 const btn = document.createElement("div");
 Object.assign(btn.style, {
   position: "fixed",
@@ -29,11 +29,8 @@ Object.assign(btn.style, {
   cursor: "pointer",
   zIndex: 999999,
 });
-btn.onclick = () =>
-  (panel.style.display = panel.style.display === "none" ? "flex" : "none");
 document.body.appendChild(btn);
 
-// 3) Panel (150×150, draggable)
 const panel = document.createElement("div");
 Object.assign(panel.style, {
   position: "fixed",
@@ -51,7 +48,10 @@ Object.assign(panel.style, {
 });
 document.body.appendChild(panel);
 
-// Restore last position
+btn.onclick = () => {
+  panel.style.display = panel.style.display === "none" ? "flex" : "none";
+};
+
 chrome.storage.local.get(["panelLeft", "panelTop"], (d) => {
   if (d.panelLeft && d.panelTop) {
     Object.assign(panel.style, {
@@ -62,7 +62,6 @@ chrome.storage.local.get(["panelLeft", "panelTop"], (d) => {
   }
 });
 
-// Drag & persist
 let dragging = false,
   ox = 0,
   oy = 0;
@@ -90,52 +89,8 @@ function onUp() {
   });
 }
 
-// 4) Header with Back button
-const header = document.createElement("div");
-header.hidden = true; // only visible in Surah view
-Object.assign(header.style, {
-  flexShrink: "0",
-  display: "flex",
-  alignItems: "center",
-  gap: "4px",
-  marginBottom: "2px",
-});
-const backBtn = document.createElement("button");
-backBtn.textContent = "←";
-Object.assign(backBtn.style, {
-  width: "24px",
-  height: "24px",
-  padding: "0",
-  border: "none",
-  borderRadius: "3px",
-  background: "#eee",
-  cursor: "pointer",
-  fontSize: "14px",
-  lineHeight: "1",
-});
-backBtn.onclick = () => {
-  header.hidden = true;
-  surahGrid.hidden = true;
-  juzGrid.hidden = false;
-};
-header.appendChild(backBtn);
-panel.appendChild(header);
-
-// 5) Surah grid (initially hidden)
-const surahGrid = document.createElement("div");
-surahGrid.hidden = true;
-Object.assign(surahGrid.style, {
-  flex: "1",
-  display: "grid",
-  gridTemplateColumns: "repeat(3,1fr)",
-  gap: "4px",
-  overflowY: "auto",
-});
-panel.appendChild(surahGrid);
-
-// 6) Juz grid (fills panel on open)
+// 3) Build the 6×5 Juz grid
 const juzGrid = document.createElement("div");
-juzGrid.hidden = false;
 Object.assign(juzGrid.style, {
   flex: "1",
   display: "grid",
@@ -146,97 +101,13 @@ Object.assign(juzGrid.style, {
 });
 panel.appendChild(juzGrid);
 
-// 7) Load all chapters
-let chapters = [];
-fetch("https://quranapi.pages.dev/api/surah.json")
-  .then((r) => r.json())
-  .then((j) => {
-    chapters = j;
-    loadJuz();
-  })
-  .catch((e) => console.error("Surah list error:", e));
-
-// 8) Fetch Juz→Surah mappings
-const juzMap = {};
-let activeJuz = null;
-function loadJuz() {
-  const calls = Array.from({ length: 30 }, (_, i) => i + 1).map((n) =>
-    fetch(`https://api.alquran.cloud/v1/juz/${n}/quran-uthmani`)
-      .then((r) => r.json())
-      .then((d) => {
-        juzMap[n] = d.data.surahs.map((s) => s.number);
-      })
-      .catch(() => {
-        juzMap[n] = [];
-      })
-  );
-  Promise.all(calls).then(renderJuz);
-}
-
-// 9) Render the 6×5 Juz buttons
-function renderJuz() {
-  juzGrid.innerHTML = "";
-  for (let i = 1; i <= 30; i++) {
-    const b = document.createElement("button");
-    b.textContent = i;
-    Object.assign(b.style, {
-      width: "100%",
-      height: "100%",
-      border: "none",
-      borderRadius: "3px",
-      background: activeJuz === i ? "#ccc" : "#eee",
-      cursor: "pointer",
-      fontSize: "10px",
-      lineHeight: "1",
-    });
-    b.onclick = () => {
-      activeJuz = i;
-      renderSurahGrid(i);
-      header.hidden = false;
-      juzGrid.hidden = true;
-      surahGrid.hidden = false;
-    };
-    juzGrid.appendChild(b);
-  }
-}
-
-// 10) Render Surahs for the selected Juz
-function renderSurahGrid(j) {
-  chrome.storage.local.get({ surahList: [] }, (d) => {
-    const unlocked = new Set(d.surahList.map((s) => s.name));
-    surahGrid.innerHTML = "";
-    const nums = new Set(juzMap[j] || []);
-    chapters.forEach((ch) => {
-      if (!nums.has(ch.number)) return;
-      const img = document.createElement("img");
-      const path =
-        quranIcons[ch.surahName] ||
-        `icons/suras/${ch.surahName.toLowerCase().replace(/\s+/g, "-")}.png`;
-      img.src = chrome.runtime.getURL(path);
-      img.title = ch.surahName;
-      Object.assign(img.style, {
-        width: "32px",
-        height: "32px",
-        objectFit: "contain",
-        filter: unlocked.has(ch.surahName)
-          ? "none"
-          : "grayscale(100%) opacity(30%)",
-        cursor: unlocked.has(ch.surahName) ? "pointer" : "default",
-      });
-      if (unlocked.has(ch.surahName))
-        img.onclick = () => showSurah(ch.surahName);
-      surahGrid.appendChild(img);
-    });
-  });
-}
-
-// 11) Overlay + Close button
+// 4) Overlay for showing a random ayah
 const overlay = document.createElement("div");
 Object.assign(overlay.style, {
   display: "none",
   position: "fixed",
-  top: "0",
-  left: "0",
+  top: 0,
+  left: 0,
   width: "100%",
   height: "100%",
   background: "rgba(0,0,0,0.8)",
@@ -247,57 +118,75 @@ Object.assign(overlay.style, {
 });
 overlay.innerHTML = `
   <div style="max-width:600px;margin:60px auto;background:#fff;padding:20px;border-radius:8px">
-    <div id="surah-content"></div>
-    <audio id="surah-audio" controls style="width:100%;margin-top:12px"></audio>
-    <button id="ayat-close" style="
+    <div id="ayah-text" style="
+      font-family:Scheherazade, serif; font-size:1.4em;
+      direction:rtl; text-align:right; background:#ffff99;
+      padding:8px; border-radius:4px;
+    "></div>
+    <div id="ayah-trans" style="margin-top:12px;font-style:italic;color:#333"></div>
+    <audio id="ayah-audio" controls style="width:100%;margin-top:12px"></audio>
+    <button id="ayah-close" style="
       margin-top:16px;width:100%;padding:8px;
       background:#eee;border:none;cursor:pointer;
-      border-radius:4px;font-size:16px;
+      border-radius:4px;font-size:16px
     ">Close</button>
   </div>`;
-overlay.querySelector("#ayat-close").onclick = () =>
+overlay.querySelector("#ayah-close").onclick = () =>
   (overlay.style.display = "none");
 document.body.appendChild(overlay);
 
-// 12) showSurah: fetch & render verse + audio
-function showSurah(name) {
-  chrome.storage.local.get({ surahList: [] }, (d) => {
-    const list = d.surahList;
-    const idx = list.findIndex((x) => x.name === name);
-    if (idx < 0) return;
-    const s = list[idx];
-    const render = () => {
-      document.getElementById("surah-content").innerHTML = `
-        <div style="font-family:sans-serif;color:#111">
-          <div style="
-            background:#ffff99;padding:8px;
-            font-size:1.4em;font-family:'Scheherazade',serif;
-            direction:rtl;text-align:right;border-radius:4px
-          ">${s.ayah}</div>
-          <div style="margin-top:12px;font-style:italic;color:#333">
-            ${s.translation}
-          </div>
-        </div>`;
-      const audioEl = document.getElementById("surah-audio");
-      audioEl.src = s.audioUrl;
-      console.log("Playing:", s.audioUrl);
+// 5) Track unlocked Juz in storage
+let unlocked = new Set();
+chrome.storage.local.get("unlockedJuz", (d) => {
+  if (Array.isArray(d.unlockedJuz)) unlocked = new Set(d.unlockedJuz);
+  renderJuz();
+});
+
+// 6) Render Juz buttons
+function renderJuz() {
+  juzGrid.innerHTML = "";
+  for (let j = 1; j <= 30; j++) {
+    const b = document.createElement("button");
+    b.textContent = j;
+    Object.assign(b.style, {
+      width: "100%",
+      height: "100%",
+      border: "none",
+      borderRadius: "3px",
+      background: unlocked.has(j) ? "#8f8" : "#eee",
+      cursor: "pointer",
+      fontSize: "10px",
+      lineHeight: "1",
+    });
+    b.addEventListener("click", () => unlockRandomAyah(j));
+    juzGrid.appendChild(b);
+  }
+}
+
+// 7) On Juz click: fetch one random verse from that Juz :contentReference[oaicite:1]{index=1}
+function unlockRandomAyah(j) {
+  fetch(
+    `https://api.quran.com/api/v4/verses/random?juz_number=${j}&language=en&translations=131&audio=7`
+  )
+    .then((res) => res.json())
+    .then((json) => {
+      const v = json.verse;
+      // Arabic
+      document.getElementById("ayah-text").textContent = v.text_uthmani;
+      // Translation
+      document.getElementById("ayah-trans").textContent =
+        v.translations?.[0]?.text || "";
+      // Audio
+      const url = v.audio?.url || "";
+      document.getElementById("ayah-audio").src = url;
+
       overlay.style.display = "block";
-    };
-    if (!s.audioUrl) {
-      fetch(`https://quranapi.pages.dev/v1/verses/${s.number}:1`)
-        .then((r) => r.json())
-        .then((j) => {
-          s.ayah = j.text;
-          s.translation = j.translation.en;
-          s.audioUrl = j.audio.primary;
-          chrome.storage.local.set({ surahList: list }, render);
-        })
-        .catch((e) => {
-          console.error(e);
-          render();
-        });
-    } else {
-      render();
-    }
-  });
+
+      // Mark Juz unlocked
+      if (!unlocked.has(j)) {
+        unlocked.add(j);
+        chrome.storage.local.set({ unlockedJuz: [...unlocked] }, renderJuz);
+      }
+    })
+    .catch((err) => console.error("Random ayah error:", err));
 }
