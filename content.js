@@ -109,6 +109,15 @@
     }
     #ayah-close:hover { background: #ddd; }
 
+    /* END SESSION BUTTON */
+    #ayah-end {
+      background: #444; color: #fff; border: none;
+      padding: 10px 16px; border-radius: 4px;
+      cursor: pointer; font-size: 14px;
+      align-self: center; margin-top: 8px;
+    }
+    #ayah-end:hover { background: #555; }
+
     /* COUNTDOWN CIRCLE */
     #qs-countdown {
       position: fixed; top: 20px; right: 20px;
@@ -215,6 +224,7 @@
           <button id="ayat-next">After</button>
         </div>
         <button id="ayah-close">Close</button>
+        <button id="ayah-end">End Session</button>
       </div>`;
     document.body.appendChild(overlay);
 
@@ -228,6 +238,7 @@
     const btnRand       = overlay.querySelector("#ayat-random");
     const btnNext       = overlay.querySelector("#ayat-next");
     const btnClose      = overlay.querySelector("#ayah-close");
+    const btnEnd        = overlay.querySelector("#ayah-end");
 
     let timerInterval;
     function startReadingTimer() {
@@ -243,11 +254,18 @@
     }
 
     function loadAudio(reciterID) {
-      const endpoint = `https://api.alquran.cloud/v1/ayah/${currentSurah}:${currentAyah}/${reciterID}`;
+      const endpoint =
+        "https://api.alquran.cloud/v1/ayah/" +
+        currentSurah + ":" +
+        currentAyah  + "/" +
+        reciterID;
+
       fetch(endpoint)
         .then(r => r.json())
         .then(js => { audioEl.src = js.data.audio; })
-        .catch(err => console.error(`Failed loading audio for ${reciterID}:`, err));
+        .catch(err => {
+          console.error("Failed loading audio for " + reciterID + ":", err);
+        });
     }
 
     function showAyah(surah, ayah, idx) {
@@ -296,6 +314,11 @@
     btnClose.onclick = () => {
       overlay.style.display = "none";
       clearInterval(timerInterval);
+    };
+    btnEnd.onclick = () => {
+      overlay.style.display = "none";
+      clearInterval(timerInterval);
+      showSettingsModal();
     };
   }
 
