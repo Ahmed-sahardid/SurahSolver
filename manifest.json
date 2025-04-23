@@ -3,11 +3,15 @@
   "name": "Surah Solver",
   "version": "1.0",
   "description": "Solve a LeetCode problem → unlock a Sūrah verse via quranapi.pages.dev!",
-  "permissions": ["storage", "notifications", "scripting"],
+  "permissions": [
+    "storage",
+    "notifications",
+    "scripting"
+  ],
   "host_permissions": [
     "https://leetcode.com/*",
-    "https://quranapi.pages.dev/*",
-    "https://api.quran.com/*"
+    "https://api.quran.com/*",
+    "https://api.alquran.cloud/*"
   ],
   "background": {
     "service_worker": "background.js"
@@ -15,28 +19,10 @@
   "content_scripts": [
     {
       "matches": ["https://leetcode.com/*"],
-      "js": ["quran_icons.js", "content.js"]
-    }
-  ],
-  "web_accessible_resources": [
-    {
-      "resources": [
-        "icons/icon128.png",
-        "icons/suras/al-asr.png",
-        "icons/suras/an-nas.png",
-        "icons/suras/yasin.png",
-        "icons/suras/al-baqarah.png"
-      ],
-      "matches": ["https://leetcode.com/*"]
+      "js": ["content.js"]
     }
   ],
   "action": {
-    "default_popup": "popup/popup.html",
-    "default_icon": {
-      "128": "icons/icon128.png"
-    }
-  },
-  "icons": {
-    "128": "icons/icon128.png"
+    "default_popup": "popup/popup.html"
   }
 }
