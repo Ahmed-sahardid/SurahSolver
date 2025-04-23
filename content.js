@@ -133,8 +133,12 @@
     let s = 1;
     while (s <= chapters.length && offsets[s] <= idx) s++;
     s--;
-    const ayah = idx - offsets[s] + 1;
-    return { surah: s, ayah, idx };
+    const ay = idx - offsets[s] + 1;
+    return { surah: s, ayah: ay, idx };
+  }
+
+  function getGlobalAyahNumber(s, a) {
+    return offsets[s - 1] + a;
   }
 
   // ── 2) FETCH RECITERS & CHAPTER METADATA ───────────────────────────────────
@@ -228,7 +232,8 @@
             reciterSelect.appendChild(opt);
           });
 
-          audioEl.src = `https://api.alquran.cloud/v1/ayah/${surah}:${ayah}/${reciterSelect.value}`;
+          const globalNum = getGlobalAyahNumber(surah, ayah);
+          audioEl.src = `https://cdn.islamic.network/quran/audio/128/${reciterSelect.value}/${globalNum}.mp3`;
           overlay.style.display = "flex";
           startReadingTimer();
         })
@@ -250,10 +255,13 @@
       showAyah(surah, ayah, idx);
     };
     btnRand.onclick = showRandomAyah;
+
     reciterSelect.onchange = () => {
-      audioEl.src = `https://api.alquran.cloud/v1/ayah/${currentSurah}:${currentAyah}/${reciterSelect.value}`;
+      const globalNum = getGlobalAyahNumber(currentSurah, currentAyah);
+      audioEl.src = `https://cdn.islamic.network/quran/audio/128/${reciterSelect.value}/${globalNum}.mp3`;
       audioEl.play();
     };
+
     btnClose.onclick = () => {
       overlay.style.display = "none";
       clearInterval(timerInterval);
@@ -288,7 +296,7 @@
     document.body.appendChild(modal);
 
     let delayMs = null;
-    const items       = modal.querySelectorAll("li");
+    const items = modal.querySelectorAll("li");
     const customInput = modal.querySelector(".custom-input");
 
     items.forEach(li => {
