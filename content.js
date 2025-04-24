@@ -57,7 +57,7 @@
       });
     });
 
-    
+
     // CONFIRM = schedule & close panel
     m.querySelector('#qs-confirm').addEventListener('click', () => {
       if (delayMs === null) {
@@ -102,7 +102,6 @@
             Isha: ${format12Hour(t.Isha)}
           </div>`;
       }).catch(()=>{ consoleEl.innerText = 'Could not load prayer times.'; });
-
     fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`)
       .then(r=>r.json()).then(loc=>{
         const city    = loc.address.city    || loc.address.town || '';
@@ -120,7 +119,6 @@
   } else {
     document.querySelector('.qs-console').innerText = 'Geolocation not supported.';
   }
-
   // ── 4) INJECT CSS ─────────────────────────────────────────────────────────
   const css = document.createElement('style');
   css.textContent = `
@@ -138,7 +136,6 @@
     .custom-input { margin-left:20px;width:60px;padding:4px;font-size:14px;display:none; }
     .qs-buttons { text-align:right;margin-top:12px; }
     .qs-buttons button { background:#333;color:#ffeb3b;border:none;padding:8px 16px;font-size:14px;cursor:pointer;border-radius:4px; }
-
     /* AYAH OVERLAY */
     #ayah-overlay { display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);align-items:center;justify-content:center;padding:20px;box-sizing:border-box;font-family:sans-serif;z-index:999999; }
     #ayah-box { position:relative;background:#fff;border-radius:8px;max-width:600px;width:100%;padding:24px;display:flex;flex-direction:column;align-items:stretch; }
@@ -151,22 +148,18 @@
     .ayat-controls button { background:#b71c1c;color:#fff;border:none;padding:8px 12px;border-radius:4px;cursor:pointer;flex:1;margin:0 4px; }
     #ayah-end { background:#444;color:#fff;border:none;padding:10px 16px;border-radius:4px;cursor:pointer;font-size:14px;align-self:center;margin-top:8px; }
     #ayah-end:hover { background:#555; }
-
     /* COUNTDOWN CIRCLE */
     #qs-countdown { position:fixed;top:20px;right:20px;width:80px;height:80px;background:#c62828;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;z-index:1000001; }
     #qs-countdown .countdown-arabic { font-size:24px;line-height:1; }
     #qs-countdown .countdown-numeric { font-size:16px;line-height:1; }
   `;
   document.head.appendChild(css);
-
   // ── 5) ARABIC DIGITS & STATE ──────────────────────────────────────────────
   const arabicDigits = { '0':'٠','1':'١','2':'٢','3':'٣','4':'٤','5':'٥','6':'٦','7':'٧','8':'٨','9':'٩' };
   function toArabic(n) { return String(n).split('').map(d=>arabicDigits[d]||d).join(''); }
-
   let chapters = [], offsets = [0], totalAyahs = 0, currentIndex = 0;
   let availableReciters = [], currentSurah = 1, currentAyah = 1;
   let showRandomAyah = () => {};
-
   function idxToSurahAyah(idx) {
     if (idx < 0) idx = totalAyahs - 1;
     if (idx >= totalAyahs) idx = 0;
@@ -174,13 +167,11 @@
     s--;
     return { surah: s, ayah: idx - offsets[s] + 1, idx };
   }
-
   // ── 6) FETCH RECITERS & CHAPTERS ─────────────────────────────────────────
   fetch("https://api.alquran.cloud/v1/edition?format=audio")
     .then(r=>r.json()).then(js=>availableReciters=js.data).catch(()=>{});
   fetch("https://api.quran.com/api/v4/chapters?language=en")
     .then(r=>r.json()).then(j=>{ chapters = j.chapters; for(let i=0;i<chapters.length;i++) offsets[i+1] = offsets[i] + chapters[i].verses_count; totalAyahs = offsets[chapters.length]; createOverlay(); }).catch(()=>{});
-
   // ── 7) COUNTDOWN ─────────────────────────────────────────────────────────
   function startCountdown(sec) {
     let rem = sec;
@@ -196,7 +187,6 @@
       }
     },1000);
   }
-
   // ── 8) AYAH OVERLAY ───────────────────────────────────────────────────────
   function createOverlay() {
     const ov = document.createElement("div"); ov.id = "ayah-overlay";
@@ -219,7 +209,6 @@
         <button id="ayah-end">End Session</button>
       </div>`;
     document.body.appendChild(ov);
-
     const timerEl = ov.querySelector("#ayah-timer"),
           hdr     = ov.querySelector("#ayah-header"),
           txt     = ov.querySelector("#ayah-text"),
@@ -230,7 +219,6 @@
           btnR    = ov.querySelector("#ayat-random"),
           btnN    = ov.querySelector("#ayat-next"),
           btnE    = ov.querySelector("#ayah-end");
-
     let ti;
     function readTimer() {
       clearInterval(ti);
@@ -243,13 +231,11 @@
         timerEl.textContent = `${mm}:${ss}`;
       }, 1000);
     }
-
     function loadAudio(id) {
       fetch(`https://api.alquran.cloud/v1/ayah/${currentSurah}:${currentAyah}/${id}`)
         .then(r=>r.json()).then(js=>{ audio.src = js.data.audio; })
         .catch(()=>{});
     }
-
     function showAyah(s,a,i) {
       currentIndex = i; currentSurah = s; currentAyah = a;
       const c = chapters.find(x=>x.id===s) || {};
@@ -270,20 +256,17 @@
         })
         .catch(()=>{});
     }
-
     showRandomAyah = () => {
       const r = Math.floor(Math.random() * totalAyahs);
       const o = idxToSurahAyah(r);
       showAyah(o.surah, o.ayah, o.idx);
     };
-
     btnP.onclick = () => { const o = idxToSurahAyah(currentIndex - 1); showAyah(o.surah,o.ayah,o.idx); };
     btnN.onclick = () => { const o = idxToSurahAyah(currentIndex + 1); showAyah(o.surah,o.ayah,o.idx); };
     btnR.onclick = showRandomAyah;
     sel.onchange    = () => loadAudio(sel.value);
     btnE.onclick    = () => { ov.style.display = "none"; clearInterval(ti); showSettingsModal(); };
   }
-
   // ── 9) SETTINGS MODAL ──────────────────────────────────────────────────────
   function showSettingsModal() {
     const m = document.createElement("div");
@@ -307,7 +290,6 @@
         </div>
       </div>`;
     document.body.appendChild(m);
-
     let delayMs = null;
     const items = m.querySelectorAll("li");
     const inp   = m.querySelector(".custom-input");
@@ -321,7 +303,6 @@
         else                           delayMs = null;
       });
     });
-
     m.querySelector("#qs-confirm").addEventListener("click", () => {
       if (delayMs === null) {
         const v = parseInt(inp.value,10);
