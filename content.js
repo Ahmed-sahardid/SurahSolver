@@ -1,17 +1,83 @@
 ;(() => {
   console.log("🔍 Surah Solver content.js injected");
 
-  // ── 1) LISTEN FOR ICON CLICK / ALARM ────────────────────────────────────
+  // ── 1) HANDLE SHOW/CLOSE MESSAGES ───────────────────────────────────────
   chrome.runtime.onMessage.addListener(msg => {
+    const modal = document.getElementById('qs-settings-modal');
     if (msg.action === 'showPanel') {
-      const modal = document.getElementById('qs-settings-modal');
       if (modal) modal.remove();
       else showSettingsModal();
+    } else if (msg.action === 'closePanel') {
+      if (modal) {
+        modal.remove();
+        chrome.runtime.sendMessage({ action: 'panelClosed' });
+      }
     }
   });
 
   // ── 2) AUTO-SHOW ON LOAD ────────────────────────────────────────────────
   showSettingsModal();
+  function showSettingsModal() {
+    const m = document.createElement('div');
+    m.id = 'qs-settings-modal';
+    m.innerHTML = `
+      <div class="qs-modal">
+        <div class="qs-console"></div>
+        <div class="qs-menu">
+          <h2>Show you an Ayah after:</h2>
+          <ul>
+            <li data-seconds="3">3 Seconds</li>
+            <li data-minutes="5">5 Minutes</li>
+            <li data-minutes="10">10 Minutes</li>
+            <li data-minutes="15">15 Minutes</li>
+            <li data-minutes="custom">
+              Custom…<input type="number" class="custom-input" min="1" placeholder="min">
+            </li>
+          </ul>
+          <div class="qs-buttons">
+            <button id="qs-confirm">Confirm</button>
+            <button id="qs-close">Close</button>
+          </div>
+        </div>
+      </div>`;
+    document.body.appendChild(m);
+
+    let delayMs = null;
+    const items = m.querySelectorAll('li');
+    const inp   = m.querySelector('.custom-input');
+
+    items.forEach(li => {
+      li.addEventListener('click', () => {
+        items.forEach(x => x.classList.remove('selected'));
+        li.classList.add('selected');
+        inp.style.display = li.dataset.minutes === 'custom' ? 'inline-block' : 'none';
+        if (li.dataset.seconds)      delayMs = parseInt(li.dataset.seconds,10)*1000;
+        else if (li.dataset.minutes) delayMs = parseInt(li.dataset.minutes,10)*60000;
+        else                          delayMs = null;
+      });
+    });
+
+    
+    // CONFIRM = schedule & close panel
+    m.querySelector('#qs-confirm').addEventListener('click', () => {
+      if (delayMs === null) {
+        const v = parseInt(inp.value,10);
+        if (v > 0) delayMs = v * 60000;
+        else return alert('Enter a valid number');
+      }
+      chrome.runtime.sendMessage({ action: 'startTimer', durationMs: delayMs });
+      m.remove();
+      chrome.runtime.sendMessage({ action: 'panelClosed' });
+      if (delayMs > 0) startCountdown(Math.floor(delayMs/1000));
+    });
+
+    // CLOSE = just close panel
+    m.querySelector('#qs-close').addEventListener('click', () => {
+      m.remove();
+      chrome.runtime.sendMessage({ action: 'panelClosed' });
+    });
+  }
+
 
   // ── 3) LOCATION & 12-HOUR SALAT TIMES ──────────────────────────────────
   function format12Hour(t24) {
