@@ -2,19 +2,35 @@
   "manifest_version": 3,
   "name": "Surah Solver",
   "version": "1.1",
-  "description": "Solve a LeetCode problem → unlock a Sūrah verse via a timer",
+  "description": "Solve a LeetCode problem → unlock a Sūrah verse via a timer on any site",
   "permissions": [
-    "storage"
+    "storage",
+    "alarms",
+    "geolocation"
   ],
   "host_permissions": [
-    "https://leetcode.com/*",
-    "https://api.quran.com/*",
-    "https://api.alquran.cloud/*",
-    "https://cdn.islamic.network/*"
+    "<all_urls>"
   ],
+  "icons": {
+    "16":  "icons/icon16.png",
+    "32":  "icons/icon32.png",
+    "48":  "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_icon": {
+      "16":  "icons/icon16.png",
+      "32":  "icons/icon32.png",
+      "48":  "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
   "content_scripts": [
     {
-      "matches": ["https://leetcode.com/*"],
+      "matches": ["<all_urls>"],
       "js": ["content.js"]
     }
   ]
