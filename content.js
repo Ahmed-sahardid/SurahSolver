@@ -1,6 +1,41 @@
 ;(() => {
   console.log("🔍 Surah Solver content.js injected");
 
+  // ── LOCATION & SALAT TIME INTEGRATION ───────────────────────────────
+  function getPrayerTimes(lat, lon) {
+    fetch(`https://api.aladhan.com/v1/timings?latitude=${lat}&longitude=${lon}&method=2`)
+      .then(res => res.json())
+      .then(data => {
+        const times = data.data.timings;
+        const salatHtml = `
+          <div style="font-size: 14px; text-align: left; padding: 8px;">
+            <strong>Prayer Times</strong><br>
+            Fajr: ${times.Fajr}<br>
+            Dhuhr: ${times.Dhuhr}<br>
+            Asr: ${times.Asr}<br>
+            Maghrib: ${times.Maghrib}<br>
+            Isha: ${times.Isha}
+          </div>`;
+        document.querySelector(".qs-console").innerHTML = salatHtml;
+      })
+      .catch(err => {
+        console.error("Failed to load prayer times:", err);
+        document.querySelector(".qs-console").innerText = "Could not load prayer times";
+      });
+  }
+
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      pos => getPrayerTimes(pos.coords.latitude, pos.coords.longitude),
+      err => {
+        console.error("Location permission denied:", err);
+        document.querySelector(".qs-console").innerText = "Enable location to see Salat times";
+      }
+    );
+  } else {
+    document.querySelector(".qs-console").innerText = "Geolocation not supported";
+  }
+
   // ── 0) INJECT ALL CSS ─────────────────────────────────────────────────────
   const css = document.createElement("style");
   css.textContent = `
